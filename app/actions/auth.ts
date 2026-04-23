@@ -43,36 +43,46 @@ export async function signup(formData: FormData) {
       .insert([{ id: authData.user.id, email: authData.user.email }])
 
     if (profileError) {
-      // Profile might already exist or trigger failed - check if states exist
-      const { data: existingStates } = await supabase
-        .from('todo_states')
-        .select('id')
-        .eq('user_id', authData.user.id)
-        .limit(1)
-
-      // If no states exist, create them manually
-      if (!existingStates || existingStates.length === 0) {
-        await supabase.from('todo_states').insert([
-          { user_id: authData.user.id, name: 'Not Started', order_index: 0, is_default: true },
-          { user_id: authData.user.id, name: 'In Progress', order_index: 1, is_default: true },
-          { user_id: authData.user.id, name: 'Done', order_index: 2, is_default: true },
-        ])
-      }
+      console.error('Profile creation error:', profileError)
     }
 
-    // Ensure states exist even if profile was created successfully
-    const { data: states } = await supabase
+    // Use database function to ensure states exist (triple fallback approach)
+    // This will work even if the trigger failed
+    try {
+      const { data: functionResult, error: functionError } = await supabase
+        .rpc('ensure_user_has_default_states', { target_user_id: authData.user.id })
+      
+      if (functionError) {
+        console.error('Function call error:', functionError)
+        // Final fallback: direct insert
+        const { data: existingStates } = await supabase
+          .from('todo_states')
+          .select('id')
+          .eq('user_id', authData.user.id)
+          .limit(1)
+
+        if (!existingStates || existingStates.length === 0) {
+          await supabase.from('todo_states').insert([
+            { user_id: authData.user.id, name: 'Not Started', order_index: 0, is_default: true },
+            { user_id: authData.user.id, name: 'In Progress', order_index: 1, is_default: true },
+            { user_id: authData.user.id, name: 'Done', order_index: 2, is_default: true },
+          ])
+        }
+      }
+    } catch (e) {
+      console.error('Unexpected error ensuring states:', e)
+    }
+
+    // Final verification
+    const { data: finalCheck } = await supabase
       .from('todo_states')
       .select('id')
       .eq('user_id', authData.user.id)
       .limit(1)
 
-    if (!states || states.length === 0) {
-      await supabase.from('todo_states').insert([
-        { user_id: authData.user.id, name: 'Not Started', order_index: 0, is_default: true },
-        { user_id: authData.user.id, name: 'In Progress', order_index: 1, is_default: true },
-        { user_id: authData.user.id, name: 'Done', order_index: 2, is_default: true },
-      ])
+    if (!finalCheck || finalCheck.length === 0) {
+      console.error('CRITICAL: User still has no states after all fallbacks!')
+      return { error: 'Failed to initialize user account. Please contact support.' }
     }
   }
 

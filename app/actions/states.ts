@@ -24,11 +24,29 @@ async function ensureDefaultStates(userId: string) {
 
   // If no states exist, create the defaults
   if (!existingStates || existingStates.length === 0) {
-    await supabase.from('todo_states').insert([
+    // Try using the database function first
+    try {
+      const { error: functionError } = await supabase
+        .rpc('ensure_user_has_default_states', { target_user_id: userId })
+      
+      if (!functionError) {
+        return // Success via function
+      }
+    } catch (e) {
+      console.error('Error calling ensure_user_has_default_states:', e)
+    }
+
+    // Fallback to direct insert
+    const { error } = await supabase.from('todo_states').insert([
       { user_id: userId, name: 'Not Started', order_index: 0, is_default: true },
       { user_id: userId, name: 'In Progress', order_index: 1, is_default: true },
       { user_id: userId, name: 'Done', order_index: 2, is_default: true },
     ])
+
+    if (error) {
+      console.error('Failed to create default states:', error)
+      throw new Error('Failed to initialize default states')
+    }
   }
 }
 
