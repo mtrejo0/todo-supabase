@@ -9,16 +9,20 @@ import { format, isPast, isToday } from 'date-fns'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 type TodoItemProps = {
   todo: Todo
   state: TodoState | undefined
   folder: Folder | undefined
+  allStates: TodoState[]
   onEdit: (todo: Todo) => void
+  isMobile: boolean
 }
 
-export function TodoItem({ todo, state, folder, onEdit }: TodoItemProps) {
+export function TodoItem({ todo, state, folder, allStates, onEdit, isMobile }: TodoItemProps) {
   const router = useRouter()
+  const [isChangingState, setIsChangingState] = useState(false)
   const {
     attributes,
     listeners,
@@ -46,6 +50,21 @@ export function TodoItem({ todo, state, folder, onEdit }: TodoItemProps) {
     }
   }
 
+  const handleStateChange = async (newStateId: string) => {
+    if (newStateId === todo.state_id) return
+
+    setIsChangingState(true)
+    try {
+      await updateTodo(todo.id, { state_id: newStateId })
+      toast.success('State updated')
+      router.refresh()
+    } catch (error) {
+      toast.error('Failed to update state')
+    } finally {
+      setIsChangingState(false)
+    }
+  }
+
   const getDateColor = (date: string | null) => {
     if (!date) return ''
     const todoDate = new Date(date)
@@ -61,15 +80,17 @@ export function TodoItem({ todo, state, folder, onEdit }: TodoItemProps) {
       className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 hover:shadow-md transition-shadow"
     >
       <div className="flex items-start gap-3">
-        <button
-          {...attributes}
-          {...listeners}
-          className="mt-1 cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-          </svg>
-        </button>
+        {!isMobile && (
+          <button
+            {...attributes}
+            {...listeners}
+            className="mt-1 cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+            </svg>
+          </button>
+        )}
 
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-50 break-words">
@@ -83,11 +104,18 @@ export function TodoItem({ todo, state, folder, onEdit }: TodoItemProps) {
           )}
 
           <div className="mt-2 flex flex-wrap gap-2 items-center text-xs">
-            {state && (
-              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-medium">
-                {state.name}
-              </span>
-            )}
+            <select
+              value={todo.state_id}
+              onChange={(e) => handleStateChange(e.target.value)}
+              disabled={isChangingState}
+              className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-medium cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50 border-none outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {allStates.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
             
             {folder && (
               <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full font-medium">
@@ -103,7 +131,7 @@ export function TodoItem({ todo, state, folder, onEdit }: TodoItemProps) {
           </div>
         </div>
 
-        <div className="opacity-0 group-hover:opacity-100 flex gap-2">
+        <div className={`flex gap-2 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
           <button
             onClick={() => onEdit(todo)}
             className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"

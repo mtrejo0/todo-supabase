@@ -36,6 +36,7 @@ type TodoListProps = {
 export function TodoList({ initialTodos, states, folders, onEditTodo, activeFolderId }: TodoListProps) {
   const [todos, setTodos] = useState(initialTodos)
   const [mounted, setMounted] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const { selectedStates, selectedFolders, searchQuery, dateFilter } = useFilterStore()
 
   // Sync local state when server data changes
@@ -46,6 +47,16 @@ export function TodoList({ initialTodos, states, folders, onEditTodo, activeFold
   // Prevent hydration mismatch by only enabling DnD after mount
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  // Detect mobile devices
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia('(max-width: 768px)').matches)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   const sensors = useSensors(
@@ -140,8 +151,8 @@ export function TodoList({ initialTodos, states, folders, onEditTodo, activeFold
     )
   }
 
-  // Render without DnD during SSR/hydration
-  if (!mounted) {
+  // Render without DnD during SSR/hydration or on mobile
+  if (!mounted || isMobile) {
     return (
       <div className="space-y-3">
         {filteredTodos.map((todo) => {
@@ -153,7 +164,9 @@ export function TodoList({ initialTodos, states, folders, onEditTodo, activeFold
               todo={todo}
               state={state}
               folder={folder}
+              allStates={states}
               onEdit={onEditTodo}
+              isMobile={isMobile}
             />
           )
         })}
@@ -161,7 +174,7 @@ export function TodoList({ initialTodos, states, folders, onEditTodo, activeFold
     )
   }
 
-  // Render with DnD after hydration
+  // Render with DnD after hydration on desktop
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={filteredTodos.map((t) => t.id)} strategy={verticalListSortingStrategy}>
@@ -175,7 +188,9 @@ export function TodoList({ initialTodos, states, folders, onEditTodo, activeFold
                 todo={todo}
                 state={state}
                 folder={folder}
+                allStates={states}
                 onEdit={onEditTodo}
+                isMobile={isMobile}
               />
             )
           })}

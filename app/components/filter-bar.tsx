@@ -47,13 +47,13 @@ export function FilterBar({ states, folders }: FilterBarProps) {
   return (
     <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 p-4">
       <div className="max-w-7xl mx-auto space-y-4">
-        <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
           <input
             type="text"
             placeholder="Search todos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 min-w-[200px] px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50"
+            className="flex-1 min-w-0 px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50"
           />
 
           <select
@@ -71,14 +71,14 @@ export function FilterBar({ states, folders }: FilterBarProps) {
           {hasActiveFilters && (
             <button
               onClick={resetFilters}
-              className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors whitespace-nowrap"
             >
               Clear Filters
             </button>
           )}
         </div>
 
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-4">
           {states.length > 0 && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -89,7 +89,7 @@ export function FilterBar({ states, folders }: FilterBarProps) {
                   <button
                     key={state.id}
                     onClick={() => toggleState(state.id)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors touch-manipulation ${
                       selectedStates.includes(state.id)
                         ? 'bg-blue-600 text-white'
                         : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600'
@@ -112,7 +112,7 @@ export function FilterBar({ states, folders }: FilterBarProps) {
                   <button
                     key={folder.id}
                     onClick={() => toggleFolder(folder.id)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors touch-manipulation ${
                       selectedFolders.includes(folder.id)
                         ? 'bg-blue-600 text-white'
                         : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600'
@@ -123,7 +123,7 @@ export function FilterBar({ states, folders }: FilterBarProps) {
                 ))}
                 <button
                   onClick={() => toggleFolder('no-folder')}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors touch-manipulation ${
                     selectedFolders.includes('no-folder')
                       ? 'bg-blue-600 text-white'
                       : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-600'
