@@ -12,10 +12,46 @@ export async function login(formData: FormData) {
     password: formData.get('password') as string,
   }
 
-  const { error } = await supabase.auth.signInWithPassword(data)
+  const { data: authData, error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Ensure profile exists for this user (fixes legacy users)
+  if (authData.user) {
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', authData.user.id)
+      .single()
+
+    // Create profile if it doesn't exist
+    if (!existingProfile) {
+      await supabase
+        .from('profiles')
+        .insert([{ id: authData.user.id, email: authData.user.email }])
+    }
+
+    // Ensure default states exist
+    const { data: existingStates } = await supabase
+      .from('todo_states')
+      .select('id')
+      .eq('user_id', authData.user.id)
+      .limit(1)
+
+    if (!existingStates || existingStates.length === 0) {
+      try {
+        await supabase.rpc('ensure_user_has_default_states', { target_user_id: authData.user.id })
+      } catch (e) {
+        // Fallback to direct insert
+        await supabase.from('todo_states').insert([
+          { user_id: authData.user.id, name: 'Not Started', order_index: 0, is_default: true },
+          { user_id: authData.user.id, name: 'In Progress', order_index: 1, is_default: true },
+          { user_id: authData.user.id, name: 'Done', order_index: 2, is_default: true },
+        ])
+      }
+    }
   }
 
   revalidatePath('/', 'layout')

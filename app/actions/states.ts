@@ -15,6 +15,23 @@ export type TodoState = {
 async function ensureDefaultStates(userId: string) {
   const supabase = await createClient()
   
+  // First ensure profile exists
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', userId)
+    .single()
+
+  // Create profile if it doesn't exist (legacy user fix)
+  if (!existingProfile) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase
+        .from('profiles')
+        .insert([{ id: userId, email: user.email }])
+    }
+  }
+
   // Check if user has any states
   const { data: existingStates } = await supabase
     .from('todo_states')
